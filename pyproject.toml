@@ -1,0 +1,34 @@
+[project]
+name = "dotfiles-maintainer"
+version = "1.0.0"
+description = "An MCP server for managing dotfiles with semantic memory and context awareness."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastmcp>=2.14.3",
+    "google-genai>=1.57.0",
+    "google-generativeai>=0.8.6",
+    "langchain-community>=0.4.1",
+    "mem0ai>=1.0.2",
+    "sentence-transformers>=5.2.0",
+]
+
+[tool.basedpyright]
+# typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
+# Disable specific annoying rules globally
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportUnusedCallResult = false
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.37.1",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+]
