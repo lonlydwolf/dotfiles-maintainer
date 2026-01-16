@@ -9,5 +9,11 @@ wheels/
 # Virtual environments
 .venv
 
+# Testing and Coverage
+.coverage
+.pytest_cache/
+htmlcov/
+
 # DotfilesMaintainer Specific
-Tasks.md
+.key
+Plans/
