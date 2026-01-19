@@ -23,7 +23,7 @@ jobs:
       run: uv python install ${{ matrix.python-version }}
       
     - name: Install dependencies
-      run: uv sync
+      run: uv sync --python ${{ matrix.python-version }}
       
     - name: Run tests with coverage
       run: uv run pytest --cov=dotfiles_maintainer --cov-report=xml
