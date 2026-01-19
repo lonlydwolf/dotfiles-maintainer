@@ -1,0 +1,38 @@
+"""[Module Name] resources.
+
+Resources provide read-only data access to the client.
+Use this for logs, config files, or system state.
+"""
+
+from pathlib import Path
+
+# Note: Register these resources in `src/dotfiles_maintainer/server.py`:
+# 
+# @mcp.resource("config://{app_name}")
+# def get_config_resource(app_name: str) -> str:
+#     """Read app configuration."""
+#     return [module_name].get_config_content(app_name)
+
+
+def get_config_content(app_name: str) -> str:
+    """
+    Retrieve configuration content for a resource.
+    
+    Args:
+        app_name: Name of the application (e.g. 'zsh').
+        
+    Returns:
+        str: The file content or data.
+    """
+    # Logic to fetch data
+    return f"Config content for {app_name}"
+
+
+def get_system_logs() -> str:
+    """
+    Retrieve system logs.
+    
+    Returns:
+        str: Log content.
+    """
+    return "Log entry 1\nLog entry 2"

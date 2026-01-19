@@ -1,0 +1,37 @@
+"""[Module Name] prompts.
+
+Prompts are reusable templates that structure LLM interactions.
+"""
+
+from mcp.server.fastmcp import FastMCP
+from mcp.types import PromptMessage, TextContent
+
+def my_custom_prompt(arg1: str) -> list[PromptMessage]:
+    """
+    [Description of what this prompt achieves].
+    
+    Args:
+        arg1: [Description of argument]
+    """
+    return [
+        PromptMessage(
+            role="user",
+            content=TextContent(
+                type="text",
+                text=f"Please analyze this input: {arg1}"
+            ),
+        )
+    ]
+
+
+def register_prompts(mcp: FastMCP) -> None:
+    """Register all prompts in this module."""
+    
+    # In server.py, import this function and call it:
+    # from .prompts.[module_name] import register_prompts
+    # register_prompts(mcp)
+
+    mcp.prompt(
+        name="my-prompt",
+        description="Description of what this prompt does",
+    )(my_custom_prompt)

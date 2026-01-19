@@ -1,0 +1,64 @@
+"""[Module Name] tools.
+
+[Brief description of the category of tools in this module, e.g., "Dependency management", "Performance profiling".]
+"""
+
+import logging
+
+from ..core.memory import MemoryManager
+# from ..core.types import ResultType # Import return types if needed
+
+logger = logging.getLogger(__name__)
+
+
+async def tool_function_name(
+    memory: MemoryManager,
+    arg1: str,
+    timeout: int = 10,
+) -> str:
+    """
+    [One-line summary of what the tool does and WHEN to use it.]
+
+    [Detailed description. Explain the logic and side effects.]
+
+    Workflow:
+    1. [Step 1]
+    2. [Step 2]
+
+    Args:
+        memory: The core memory manager instance.
+        arg1: [Description of arg1].
+        timeout: VCS or subprocess timeout in seconds (default: 10).
+
+    Returns:
+        str: A status message or structured result.
+
+    Raises:
+        Exception: Describe potential error states.
+
+    Note:
+        Register this tool in `src/dotfiles_maintainer/server.py` using:
+        
+        @mcp.tool(description="...")
+        async def my_tool(ctx: Context[ServerSession, AppContext], arg1: str) -> str:
+            return await [module_name].tool_function_name(
+                get_memory(ctx), arg1, timeout=get_config(ctx).vcs_timeout
+            )
+    """
+    try:
+        logger.info(f"Executing tool_function_name with {arg1}")
+
+        # Implementation logic here...
+        result = f"Successfully processed {arg1}"
+
+        # Record action in semantic memory
+        await memory.add_with_redaction(
+            f"Action: {result}",
+            metadata={"type": "custom_type", "status": "success"}
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error in tool_function_name: {e}")
+        return f"Error: {str(e)}"
