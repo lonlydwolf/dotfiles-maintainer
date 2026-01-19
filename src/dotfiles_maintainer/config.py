@@ -111,6 +111,7 @@ class ServerConfig(BaseSettings):
                 provider="qdrant",
                 config={
                     "path": str(self.memory_db_path),
+                    "on_disk": True,
                     "embedding_model_dims": self.embedding_dims,
                 },
             ),
