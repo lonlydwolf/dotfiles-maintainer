@@ -232,9 +232,11 @@ async def test_app_lifespan():
     from dotfiles_maintainer.server import app_lifespan
 
     mock_server = MagicMock()
-    async with app_lifespan(mock_server) as context:
-        assert context.config is not None
-        assert context.memory is not None
+    with patch("dotfiles_maintainer.server.MemoryManager") as MockMemoryManager:
+        async with app_lifespan(mock_server) as context:
+            assert context.config is not None
+            assert context.memory is not None
+            MockMemoryManager.assert_called_once()
 
 
 def test_main():

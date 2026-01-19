@@ -3,7 +3,7 @@
 import os
 import subprocess
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from dotfiles_maintainer.server import mcp
@@ -116,8 +116,10 @@ async def test_server_lifespan_integration():
     with pytest.MonkeyPatch().context() as mp:
         test_path = "/tmp/dotfiles-test-qdrant"
         mp.setenv("DOTFILES_MEMORY_PATH", test_path)
-        async with app_lifespan(mock_server) as context:
-            assert context.config is not None
-            assert context.memory is not None
-            # Resolve both paths to handle /private/tmp on macOS
-            assert context.config.memory_db_path.resolve() == Path(test_path).resolve()
+        with patch("dotfiles_maintainer.server.MemoryManager") as MockMemoryManager:
+            async with app_lifespan(mock_server) as context:
+                assert context.config is not None
+                assert context.memory is not None
+                # Resolve both paths to handle /private/tmp on macOS
+                assert context.config.memory_db_path.resolve() == Path(test_path).resolve()
+                MockMemoryManager.assert_called_once()
