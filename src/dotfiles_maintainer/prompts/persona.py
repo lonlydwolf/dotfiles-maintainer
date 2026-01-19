@@ -8,7 +8,7 @@ from mcp.types import PromptMessage, TextContent
 
 def dotmate_persona() -> list[PromptMessage]:
     """Load the full DotMate persona from Persona.md."""
-    persona_path = (Path(__file__).parent.parent.parent / "Persona.md").resolve()
+    persona_path = (Path(__file__).parent / "Persona.md").resolve()
 
     with open(persona_path, "r") as f:
         content = f.read()
