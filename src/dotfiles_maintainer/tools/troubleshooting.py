@@ -65,12 +65,11 @@ async def get_troubleshooting_guide(
 
     """
     try:
-        raw_results = await memory.search(f"troubleshooting {error_keyword}")
-        result = raw_results.get("results", [])
+        search_results = await memory.search(f"troubleshooting {error_keyword}")
         logger.info(
-            f"Retrieved {len(result)} troubleshooting logs for '{error_keyword}'"
+            f"Retrieved {len(search_results.results)} troubleshooting logs for '{error_keyword}'"
         )
-        return result
+        return search_results.results
 
     except Exception as e:
         logger.error(

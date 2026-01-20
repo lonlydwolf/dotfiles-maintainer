@@ -82,8 +82,8 @@ async def health_check(
             overall_status = "unhealthy"
             break
 
-    return {
-        "status": overall_status,
-        "version": "1.0.0",  # This could be dynamically loaded from pyproject.toml if needed
-        "components": components,
-    }
+    return HealthStatus(
+        status=overall_status,
+        version="1.0.0",  # This could be dynamically loaded from pyproject.toml if needed
+        components=components,
+    )

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Literal, TypedDict
+from typing import Literal
 
-JSONValue = str | int | float | bool | None | dict[str, "JSONValue"] | list["JSONValue"]
+from pydantic import BaseModel, Field, JsonValue
 
 
-class MemoryResult(TypedDict):
+class MemoryResult(BaseModel):
     """A single search result from the memory vector store.
 
     Attributes:
@@ -23,12 +23,12 @@ class MemoryResult(TypedDict):
     id: str
     memory: str
     score: float
-    metadata: dict[str, JSONValue] | None
-    created_at: str | None
-    updated_at: str | None
+    metadata: dict[str, JsonValue] | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
 
-class SearchResult(TypedDict):
+class SearchResult(BaseModel):
     """Response from a memory search operation.
 
     Attributes:
@@ -37,27 +37,40 @@ class SearchResult(TypedDict):
 
     """
 
-    results: list[MemoryResult]
-    relations: list[JSONValue] | None
+    results: list[MemoryResult] = Field(default_factory=list)
+    relations: list[JsonValue] | None = None
 
 
-class Mem0Event(TypedDict, total=False):
-    """Event returned by mem0 add operation."""
+class SearchResultWithGraph(BaseModel):
+    """Extended search result when graph store is enabled."""
+
+    results: list[MemoryResult] = Field(default_factory=list)
+    relations: list[dict[str, JsonValue]] = Field(default_factory=list)
+
+
+class Mem0Event(BaseModel):
+    """Single event from mem0 add/update operation."""
 
     id: str
     memory: str
-    event: str
-    data: dict[str, str]
+    event: Literal["ADD", "UPDATE", "DELETE", "NOOP"]
+    data: dict[str, str] = Field(default_factory=dict)
 
 
-class Mem0Response(TypedDict, total=False):
+class Mem0AddResponse(BaseModel):
     """Response from mem0 add/update operation (v1.1+)."""
 
-    results: list[Mem0Event]
-    message: str  # For updates
+    results: list[Mem0Event] = Field(default_factory=list)
 
 
-class AppConfig(TypedDict):
+class Mem0UpdateResponse(BaseModel):
+    """Response from mem0 update()."""
+
+    message: str  # "Memory updated successfully"
+    # Note: update() doesn't return results list
+
+
+class AppConfig(BaseModel):
     """Represents a single application's configuration setup.
 
     This defines where an app's config files are, how they're structured,
@@ -76,7 +89,7 @@ class AppConfig(TypedDict):
     source_path: str
     destination_path: str
     file_structure: Literal["modular", "monolithic"]
-    dependencies: list[str | AppConfig]
+    dependencies: list[str | AppConfig] | None = None
 
 
 class AppChange(AppConfig):
@@ -104,7 +117,7 @@ class AppChange(AppConfig):
     vcs_commit_id: str | None
 
 
-class SystemMetadata(TypedDict):
+class SystemMetadata(BaseModel):
     """Hardware and software environment details for a machine.
 
     This establishes the ground truth for a user's system, allowing the agent
@@ -136,7 +149,7 @@ class SystemMetadata(TypedDict):
     extra: str
 
 
-class HealthStatus(TypedDict):
+class HealthStatus(BaseModel):
     """Representation of the server's health status.
 
     Attributes:
@@ -151,7 +164,7 @@ class HealthStatus(TypedDict):
     components: dict[str, str]
 
 
-class DriftResult(TypedDict):
+class DriftResult(BaseModel):
     """Result of a configuration drift check."""
 
     status: Literal["clean", "modified", "error"]

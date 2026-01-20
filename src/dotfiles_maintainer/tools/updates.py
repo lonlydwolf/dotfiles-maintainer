@@ -7,11 +7,14 @@ found to be incorrect or outdated.
 import logging
 
 from ..core.memory import MemoryManager
+from ..core.types import Mem0UpdateResponse
 
 logger = logging.getLogger(__name__)
 
 
-async def update_memory(memory: MemoryManager, memory_id: str, new_text: str) -> str:
+async def update_memory(
+    memory: MemoryManager, memory_id: str, new_text: str
+) -> Mem0UpdateResponse:
     """Edit or correct an existing semantic memory entry.
 
     Use this when you realize a stored memory contains incorrect information
@@ -36,11 +39,13 @@ async def update_memory(memory: MemoryManager, memory_id: str, new_text: str) ->
     """
     try:
         await memory.update(memory_id, new_text)
-        output = f"Memory {memory_id} updated successfully."
-        logger.info(output)
-        return output
+        msg = f"Memory {memory_id} updated successfully."
+        logger.info(msg)
+        output = Mem0UpdateResponse(message=msg)
+        return Mem0UpdateResponse.model_validate(output)
 
     except Exception as e:
         err_msg = f"Error updating memory[{memory_id}]: {e}"
         logger.error(err_msg)
-        return err_msg
+        output = Mem0UpdateResponse(message=err_msg)
+        return Mem0UpdateResponse.model_validate(output)

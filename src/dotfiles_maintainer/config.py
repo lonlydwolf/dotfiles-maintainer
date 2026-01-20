@@ -107,6 +107,7 @@ class ServerConfig(BaseSettings):
     def memory_config(self) -> MemoryConfig:
         """Construct the full mem0 configuration object."""
         return MemoryConfig(
+            version="v1.1",  # This controls output format globally
             vector_store=VectorStoreConfig(
                 provider="qdrant",
                 config={

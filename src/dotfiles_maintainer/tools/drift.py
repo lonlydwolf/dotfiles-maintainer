@@ -58,13 +58,13 @@ async def check_config_drift(memory: MemoryManager, timeout: int = 10) -> DriftR
         output = vcs_cmd.get_status(timeout=timeout)
 
         if not output.strip():
-            return {
-                "status": "clean",
-                "vcs_type": vcs_type,
-                "modified_files": [],
-                "total_changes": 0,
-                "message": "No drift detected. System matches repository state.",
-            }
+            return DriftResult(
+                status="clean",
+                vcs_type=vcs_type,
+                modified_files=[],
+                total_changes=0,
+                message="No drift detected. System matches repository state.",
+            )
 
         modified_files = [line.strip() for line in output.splitlines() if line.strip()]
 
@@ -76,19 +76,20 @@ async def check_config_drift(memory: MemoryManager, timeout: int = 10) -> DriftR
 
         logger.info(f"Drift detected at {vcs_type}:\n{output}")
 
-        return {
-            "status": "modified",
-            "vcs_type": vcs_type,
-            "modified_files": modified_files,
-            "total_changes": len(modified_files),
-            "message": message,
-        }
+        return DriftResult(
+            status="modified",
+            vcs_type=vcs_type,
+            modified_files=modified_files,
+            total_changes=len(modified_files),
+            message=message,
+        )
+
     except Exception as e:
         logger.error(f"Error checking drift: {str(e)}")
-        return {
-            "status": "error",
-            "vcs_type": "git",  # Default if error before detection
-            "modified_files": [],
-            "total_changes": 0,
-            "message": f"Error checking drift: {str(e)}",
-        }
+        return DriftResult(
+            status="error",
+            vcs_type="git",  # Default if error before detection
+            modified_files=[],
+            total_changes=0,
+            message=f"Error checking drift: {str(e)}",
+        )

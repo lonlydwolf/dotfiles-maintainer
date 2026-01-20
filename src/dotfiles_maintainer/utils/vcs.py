@@ -132,11 +132,11 @@ async def detect_vcs_from_memory() -> VCSType | None:
         # Search for system baseline metadata
         result = await memory_manager.search("version_control", limit=1)
 
-        if not result.get("results"):
+        if not result.results:
             logger.debug("No VCS info in memory")
             return None
 
-        memory_text = result["results"][0].get("memory", "")
+        memory_text = result.results[0].memory
 
         # Parse VCS from memory text
         if (

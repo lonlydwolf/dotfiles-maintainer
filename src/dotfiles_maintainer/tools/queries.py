@@ -33,10 +33,11 @@ async def get_config_context(
 
     """
     try:
-        raw_results = await memory.search(app_name)
-        results = raw_results.get("results", [])
-        logger.info(f"Retrieved {len(results)} context results for '{app_name}'")
-        return results
+        search_results = await memory.search(app_name)
+        logger.info(
+            f"Retrieved {len(search_results.results)} context results for '{app_name}'"
+        )
+        return search_results.results
 
     except Exception as e:
         logger.error(f"Failed to query '{app_name}': {e}")
@@ -66,10 +67,11 @@ async def search_change_history(
         search_query = f"{app_name}: {query}"
 
     try:
-        raw_results = await memory.search(search_query)
-        results = raw_results.get("results", [])
-        logger.info(f"Retrieved {len(results)} history results for '{search_query}'")
-        return results
+        search_results = await memory.search(search_query)
+        logger.info(
+            f"Retrieved {len(search_results.results)} history results for '{search_query}'"
+        )
+        return search_results.results
 
     except Exception as e:
         logger.error(f"Failed to query '{search_query}': {e}")
@@ -93,10 +95,11 @@ async def check_system_dependencies(
 
     """
     try:
-        raw_results = await memory.search(tool_name)
-        results = raw_results.get("results", [])
-        logger.info(f"Retrieved {len(results)} dependency results for '{tool_name}'")
-        return results
+        search_results = await memory.search(tool_name)
+        logger.info(
+            f"Retrieved {len(search_results.results)} dependency results for '{tool_name}'"
+        )
+        return search_results.results
 
     except Exception as e:
         logger.error(f"Failed to query '{tool_name}': {e}")
@@ -129,7 +132,7 @@ async def sync_work_in_progress(
 
     """
     try:
-        files = [f["app_name"] for f in modified_files]
+        files = [f.app_name for f in modified_files]
         msg = f"WIP Session Goal: {session_goal}\nModified: {files}\nStruggle: {current_struggle}"
         await memory.add_with_redaction(msg, metadata={"type": "wip"})
         logger.info("WIP synchronized")

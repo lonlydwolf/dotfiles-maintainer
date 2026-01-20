@@ -69,10 +69,9 @@ async def list_active_trials(
     """
     try:
         _ = min_days_active
-        raw_results = await memory.search("active plugin trials")
-        result = raw_results.get("results", [])
-        logger.info(f"Retrieved {len(result)} active trials")
-        return result
+        search_results = await memory.search("active plugin trials")
+        logger.info(f"Retrieved {len(search_results.results)} active trials")
+        return search_results.results
 
     except Exception as e:
         logger.error(f"Failed to retrieve Trials: {e}")

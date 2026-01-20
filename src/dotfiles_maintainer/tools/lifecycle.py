@@ -54,9 +54,9 @@ async def track_lifecycle_events(
 
     """
     try:
-        msg = f"Lifecycle Event: {action} on {old_config['app_name']}. "
+        msg = f"Lifecycle Event: {action} on {old_config.app_name}. "
         if new_config:
-            msg += f"Replaced by {new_config['app_name']}. "
+            msg += f"Replaced by {new_config.app_name}. "
         msg += f"Logic: {logic}"
 
         await memory.add_with_redaction(msg, metadata={"type": "lifecycle"})

@@ -56,10 +56,10 @@ async def commit_contextual_change(
 
     """
     try:
-        msg = f"{data['app_name']} change({data['change_type']}) -> {data['description']} \n Why? {data['rationale']} \n Improvement: {data['improvement_metric']} "
+        msg = f"{data.app_name} change({data.change_type}) -> {data.description} \n Why? {data.rationale} \n Improvement: {data.improvement_metric} "
 
-        if data.get("vcs_commit_id"):
-            msg += f"\nVCS Commit: {data['vcs_commit_id']}"
+        if data.vcs_commit_id:
+            msg += f"\nVCS Commit: {data.vcs_commit_id}"
 
         result = await memory.add_with_redaction(msg, metadata={"type": "change"})
 

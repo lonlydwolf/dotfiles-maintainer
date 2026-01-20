@@ -80,11 +80,12 @@ async def query_roadmap(
         if priority:
             query += f" {priority} priority"
 
-        raw_results = await memory.search(query)
-        results = raw_results.get("results", [])
+        search_results = await memory.search(query)
 
-        logger.info(f"Retrieved {len(results)} roadmap items for query '{query}'")
-        return results
+        logger.info(
+            f"Retrieved {len(search_results.results)} roadmap items for query '{query}'"
+        )
+        return search_results.results
 
     except Exception as e:
         logger.error(f"Failed to retrieve future ideas: {e}")

@@ -16,6 +16,7 @@ from .core.types import (
     AppConfig,
     DriftResult,
     HealthStatus,
+    Mem0UpdateResponse,
     MemoryResult,
     SystemMetadata,
 )
@@ -274,7 +275,7 @@ async def check_system_dependencies(
 )
 async def update_memory(
     ctx: Context[ServerSession, AppContext], memory_id: str, new_text: str
-) -> str:
+) -> Mem0UpdateResponse:
     """Edit a memory if it turns out to be wrong."""
     return await updates.update_memory(get_memory(ctx), memory_id, new_text)
 
