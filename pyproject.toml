@@ -1,6 +1,6 @@
 [project]
 name = "dotfiles-maintainer"
-version = "1.0.0"
+version = "1.0.1"
 description = "An MCP server for managing dotfiles with semantic memory and context awareness."
 readme = "README.md"
 requires-python = ">=3.10"

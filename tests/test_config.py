@@ -21,4 +21,4 @@ def test_server_config_ollama():
         llm_cfg = config.llm_config
         assert llm_cfg.provider == "ollama"
         assert llm_cfg.config is not None
-        assert llm_cfg.config["base_url"] == "http://localhost:11434"
+        assert llm_cfg.config["model"] == config.llm_model

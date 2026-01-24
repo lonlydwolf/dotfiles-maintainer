@@ -31,10 +31,10 @@ async def test_health_check_healthy(mock_config, mock_memory_manager):
     with patch("dotfiles_maintainer.tools.health.detect_vcs_type", return_value="git"):
         status = await health_check(mock_config, mock_memory_manager)
 
-        assert status["status"] == "healthy"
-        assert status["components"]["memory"] == "connected"
-        assert status["components"]["vcs"] == "active (git)"
-        assert status["components"]["llm_provider"] == "configured (google)"
+        assert status.status == "healthy"
+        assert status.components["memory"] == "connected"
+        assert status.components["vcs"] == "active (git)"
+        assert status.components["llm_provider"] == "configured (google)"
 
 
 @pytest.mark.asyncio
@@ -45,9 +45,9 @@ async def test_health_check_memory_error(mock_config, mock_memory_manager):
     with patch("dotfiles_maintainer.tools.health.detect_vcs_type", return_value="git"):
         status = await health_check(mock_config, mock_memory_manager)
 
-        assert status["status"] == "unhealthy"
-        assert "error" in status["components"]["memory"]
-        assert status["components"]["memory"] == "error: Connection refused"
+        assert status.status == "unhealthy"
+        assert "error" in status.components["memory"]
+        assert status.components["memory"] == "error: Connection refused"
 
 
 @pytest.mark.asyncio
@@ -61,8 +61,8 @@ async def test_health_check_vcs_error(mock_config, mock_memory_manager):
     ):
         status = await health_check(mock_config, mock_memory_manager)
 
-        assert status["status"] == "unhealthy"
-        assert "error" in status["components"]["vcs"]
+        assert status.status == "unhealthy"
+        assert "error" in status.components["vcs"]
 
 
 @pytest.mark.asyncio
@@ -74,5 +74,5 @@ async def test_health_check_llm_missing_key(mock_config, mock_memory_manager):
     with patch("dotfiles_maintainer.tools.health.detect_vcs_type", return_value="jj"):
         status = await health_check(mock_config, mock_memory_manager)
 
-        assert status["status"] == "unhealthy"
-        assert status["components"]["llm_provider"] == "missing_key"
+        assert status.status == "unhealthy"
+        assert status.components["llm_provider"] == "missing_key"

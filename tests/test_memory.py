@@ -1,12 +1,17 @@
 """Tests for the MemoryManager core module."""
 
-from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from dotfiles_maintainer.config import ServerConfig
-from dotfiles_maintainer.core.memory import MemoryManager
-from dotfiles_maintainer.core.types import Mem0Response
+from dotfiles_maintainer.core.memory import MemoryManager, MemorySearchError
+from dotfiles_maintainer.core.types import (
+    Mem0AddResponse,
+    Mem0Event,
+    Mem0UpdateResponse,
+    MemoryResult,
+    SearchResult,
+)
 from mem0 import AsyncMemory
 
 
@@ -50,9 +55,9 @@ async def test_add_with_redaction_success(
     text = "secret key is sk-123456789012345678901234567890123456789012345678"
     expected_redacted = "secret key is [OPENAI_API_KEY_REDACTED]"
 
-    mock_response: Mem0Response = {
-        "results": [{"id": "123", "memory": expected_redacted, "event": "ADD"}]
-    }
+    mock_response = Mem0AddResponse(
+        results=[Mem0Event(id="123", memory=expected_redacted, event="ADD")]
+    )
     mock_mem0_client.add.return_value = mock_response
 
     # Execute
@@ -60,9 +65,11 @@ async def test_add_with_redaction_success(
 
     # Verify
     mock_mem0_client.add.assert_called_once_with(
-        expected_redacted, user_id="test_user", metadata=None
+        messages=expected_redacted, user_id="test_user", metadata=None
     )
-    assert result == mock_response
+    assert isinstance(result, Mem0AddResponse)
+    assert result.results[0].id == "123"
+    assert result.results[0].memory == expected_redacted
 
 
 @pytest.mark.asyncio
@@ -72,19 +79,19 @@ async def test_search_success(
     """Test successful search operation."""
     # Setup
     query = "test query"
-    mock_results = {
-        "results": [
-            {
-                "id": "1",
-                "memory": "test memory",
-                "score": 0.9,
-                "metadata": {"type": "test"},
-                "created_at": "2023-01-01T00:00:00Z",
-                "updated_at": "2023-01-01T00:00:00Z",
-            }
+    mock_results = SearchResult(
+        results=[
+            MemoryResult(
+                id="1",
+                memory="test memory",
+                score=0.9,
+                metadata={"type": "test"},
+                created_at="2023-01-01T00:00:00Z",
+                updated_at="2023-01-01T00:00:00Z",
+            )
         ],
-        "relations": None,
-    }
+        relations=None,
+    )
     mock_mem0_client.search.return_value = mock_results
 
     # Execute
@@ -94,7 +101,9 @@ async def test_search_success(
     mock_mem0_client.search.assert_called_once_with(
         query, user_id="test_user", limit=10
     )
-    assert result == cast(object, mock_results)
+    assert isinstance(result, SearchResult)
+    assert result.results[0].id == "1"
+    assert result.results[0].memory == "test memory"
 
 
 @pytest.mark.asyncio
@@ -107,7 +116,11 @@ async def test_update_success(
     text = "updated secret sk-123456789012345678901234567890123456789012345678"
     expected_redacted = "updated secret [OPENAI_API_KEY_REDACTED]"
 
-    mock_response: Mem0Response = {"message": "Memory updated successfully"}
+    mock_response = Mem0UpdateResponse(
+        id=memory_id,
+        text=expected_redacted,
+        updated_at="2023-01-01T00:00:00Z",
+    )
     mock_mem0_client.update.return_value = mock_response
 
     # Execute
@@ -117,7 +130,9 @@ async def test_update_success(
     mock_mem0_client.update.assert_called_once_with(
         data=expected_redacted, memory_id=memory_id
     )
-    assert result == mock_response
+    assert isinstance(result, Mem0UpdateResponse)
+    assert result.id == memory_id
+    assert result.text == expected_redacted
 
 
 @pytest.mark.asyncio
@@ -135,8 +150,6 @@ async def test_search_failure(
     memory_manager: MemoryManager, mock_mem0_client: AsyncMock
 ) -> None:
     """Test search failure."""
-    from dotfiles_maintainer.core.memory import MemorySearchError
-
     mock_mem0_client.search.side_effect = Exception("Search failed")
     with pytest.raises(MemorySearchError, match="Failed to search"):
         await memory_manager.search("query")
@@ -149,7 +162,8 @@ async def test_search_empty_result(
     """Test search with empty result."""
     mock_mem0_client.search.return_value = None
     result = await memory_manager.search("query")
-    assert result == {"results": [], "relations": None}
+    assert isinstance(result, SearchResult)
+    assert len(result.results) == 0
 
 
 @pytest.mark.asyncio
@@ -160,22 +174,3 @@ async def test_update_failure(
     mock_mem0_client.update.side_effect = Exception("Update failed")
     with pytest.raises(Exception, match="Update failed"):
         await memory_manager.update("123", "text")
-
-
-def test_validate_search_result_list(memory_manager: MemoryManager):
-    """Test validation when result is a list."""
-    mock_list = [
-        {"id": "1", "memory": "m1"},
-        {"id": "2", "memory": "m2"},
-        {"invalid": "item"},
-    ]
-    result = memory_manager._validate_search_result(mock_list)
-    assert len(result["results"]) == 2
-    assert result["results"][0]["id"] == "1"
-    assert result["relations"] is None
-
-
-def test_validate_search_result_invalid_type(memory_manager: MemoryManager):
-    """Test validation with invalid type."""
-    with pytest.raises(TypeError, match="Expected dict or list"):
-        memory_manager._validate_search_result(123)

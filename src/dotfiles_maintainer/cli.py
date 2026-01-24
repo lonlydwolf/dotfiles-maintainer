@@ -6,9 +6,10 @@ import json
 import logging
 import platform
 import sys
+from collections.abc import Coroutine
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar, Annotated
 
 import typer
 from rich.console import Console
@@ -43,6 +44,7 @@ app.add_typer(tools_app)
 # --- Asyncio Management ---
 
 _loop: asyncio.AbstractEventLoop | None = None
+T = TypeVar("T")
 
 
 def get_loop() -> asyncio.AbstractEventLoop:
@@ -88,7 +90,7 @@ def shutdown_loop():
 atexit.register(shutdown_loop)
 
 
-def run_async(coro):
+def run_async(coro: Coroutine[Any, Any, T]) -> T:
     """Run a coroutine using the shared event loop."""
     loop = get_loop()
     return loop.run_until_complete(coro)
@@ -105,10 +107,10 @@ def get_memory() -> MemoryManager:
 
 @app.callback()
 def main(
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable verbose logging."
-    ),
-):
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Enable verbose logging.")
+    ] = False,
+) -> None:
     """Dotfiles Maintainer CLI."""
     log_level = logging.DEBUG if verbose else logging.WARNING
     logging.basicConfig(level=log_level)
@@ -119,9 +121,9 @@ def main(
 
 @memory_app.command("inspect")
 def memory_inspect(
-    query: str = typer.Argument(..., help="Search query to inspect memory."),
-    limit: int = typer.Option(5, help="Number of results to return."),
-):
+    query: Annotated[str, typer.Argument(help="Search query to inspect memory.")],
+    limit: Annotated[int, typer.Option(help="Number of results to return.")] = 5,
+) -> None:
     """Semantic search in the memory store."""
     console.print(f"[bold blue]Searching memory for:[/bold blue] '{query}'")
     manager = get_memory()
@@ -137,10 +139,10 @@ def memory_inspect(
         table.add_column("Score", style="green")
 
         for mem in results.results:
-            # Handle both dict and object access if model usage varies
-            mem_id = getattr(mem, "id", None) or mem.id or "N/A"
-            text = getattr(mem, "memory", None) or mem.memory or "N/A"
-            score = getattr(mem, "score", None) or mem.score or 0.0
+            # Use Pydantic model attributes directly
+            mem_id = mem.id
+            text = mem.memory
+            score = mem.score
             table.add_row(str(mem_id), str(text), f"{score:.2f}")
 
         console.print(table)
@@ -150,8 +152,10 @@ def memory_inspect(
 
 @memory_app.command("facts")
 def memory_facts(
-    limit: int = typer.Option(20, help="Limit the number of facts displayed."),
-):
+    limit: Annotated[
+        int, typer.Option(help="Limit the number of facts displayed.")
+    ] = 20,
+) -> None:
     """List all extracted facts/memories."""
     console.print("[bold blue]Retrieving all memories...[/bold blue]")
     manager = get_memory()
@@ -166,9 +170,8 @@ def memory_facts(
         table.add_column("Fact", style="white")
 
         for mem in memories.results:
-            # 'mem' is likely a dict from mem0
-            mem_id = mem.id or "N/A"
-            text = mem.memory or "N/A"
+            mem_id = mem.id
+            text = mem.memory
             table.add_row(str(mem_id), str(text))
 
         console.print(table)
@@ -178,10 +181,10 @@ def memory_facts(
 
 @memory_app.command("clear")
 def memory_clear(
-    force: bool = typer.Option(
-        False, "--force", "-f", help="Force deletion without confirmation."
-    ),
-):
+    force: Annotated[
+        bool, typer.Option("--force", "-f", help="Force deletion without confirmation.")
+    ] = False,
+) -> None:
     """Clear all memories (Reset)."""
     if not force:
         if not typer.confirm("Are you sure you want to DELETE ALL memories?"):
@@ -201,14 +204,14 @@ def memory_clear(
 
 
 @config_app.command("show")
-def config_show():
+def config_show() -> None:
     """Show current server configuration."""
     config = ServerConfig()
     console.print(f"[bold]Config Source:[/bold] {config.model_dump_json(indent=2)}")
 
 
 @config_app.command("path")
-def config_path():
+def config_path() -> None:
     """Show configuration file paths."""
     # This assumes .env or standard paths.
     console.print(f"[bold]Working Directory:[/bold] {Path.cwd()}")
@@ -222,7 +225,7 @@ def config_path():
 
 
 @system_app.command("info")
-def system_info():
+def system_info() -> None:
     """Display system information."""
     info = {
         "System": platform.system(),
@@ -242,7 +245,7 @@ def system_info():
 
 
 @system_app.command("drift")
-def system_drift():
+def system_drift() -> None:
     """Check for configuration drift."""
     console.print("[bold blue]Checking for config drift...[/bold blue]")
     manager = get_memory()
@@ -268,7 +271,7 @@ def system_drift():
 
 
 @system_app.command("health")
-def system_health():
+def system_health() -> None:
     """Check server health."""
     console.print("[bold blue]Checking system health...[/bold blue]")
     # Import health module locally to avoid circular deps if any
@@ -304,7 +307,7 @@ def system_health():
 
 
 @tools_app.command("list")
-def tools_list():
+def tools_list() -> None:
     """List all registered MCP tools."""
     # Access the tool manager from the FastMCP instance
     # Note: Accessing private member _tool_manager might be brittle but necessary for CLI
@@ -355,16 +358,16 @@ class MockRequest:
 class MockContext:
     request_context: MockRequest
 
-    def info(self, msg: str):
+    def info(self, msg: str) -> None:
         logging.info(msg)
 
-    def error(self, msg: str):
+    def error(self, msg: str) -> None:
         logging.error(msg)
 
-    def warning(self, msg: str):
+    def warning(self, msg: str) -> None:
         logging.warning(msg)
 
-    def debug(self, msg: str):
+    def debug(self, msg: str) -> None:
         logging.debug(msg)
 
 
@@ -373,8 +376,8 @@ class MockContext:
 )
 def tools_run(
     ctx: typer.Context,
-    tool_name: str = typer.Argument(..., help="Name of the tool to run."),
-):
+    tool_name: Annotated[str, typer.Argument(help="Name of the tool to run.")],
+) -> None:
     """Run a specific MCP tool with arguments (e.g. key=value)."""
 
     # 1. Find the tool
@@ -394,20 +397,22 @@ def tools_run(
     # 2. Parse Arguments
     # ctx.args contains ["key=value", "--flag", ...]
     # We support key=value mainly.
-    kwargs = {}
+    kwargs: dict[str, Any] = {}
     for arg in ctx.args:
         if "=" in arg:
             k, v = arg.split("=", 1)
             # Basic type inference
             if v.lower() == "true":
-                v = True
+                v_typed: Any = True
             elif v.lower() == "false":
-                v = False
+                v_typed = False
             elif v.isdigit():
-                v = int(v)
+                v_typed = int(v)
+            else:
+                v_typed = v
             # Remove leading -- if present
             k = k.lstrip("-")
-            kwargs[k] = v
+            kwargs[k] = v_typed
         else:
             console.print(
                 f"[yellow]Ignored argument '{arg}'. Use key=value format.[/yellow]"

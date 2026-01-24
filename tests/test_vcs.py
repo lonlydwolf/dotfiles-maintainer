@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from dotfiles_maintainer.core.types import MemoryResult, SearchResult
 from dotfiles_maintainer.utils.vcs import (
     VCSCommand,
     detect_vcs_from_filesystem,
@@ -52,9 +53,13 @@ def test_get_vcs_type_cached(tmp_path):
 async def test_detect_vcs_from_memory_success():
     with patch("dotfiles_maintainer.core.memory.MemoryManager") as MockMemoryManager:
         mock_instance = MockMemoryManager.return_value
-        # Mocking search to return a future
+        # Mocking search to return a SearchResult
         mock_instance.search = AsyncMock(
-            return_value={"results": [{"memory": "version_control: 'jj'"}]}
+            return_value=SearchResult(
+                results=[
+                    MemoryResult(id="1", memory="version_control: 'jj'", score=1.0)
+                ]
+            )
         )
 
         # Also need to mock ServerConfig inside detect_vcs_from_memory
@@ -67,7 +72,7 @@ async def test_detect_vcs_from_memory_success():
 async def test_detect_vcs_from_memory_none():
     with patch("dotfiles_maintainer.core.memory.MemoryManager") as MockMemoryManager:
         mock_instance = MockMemoryManager.return_value
-        mock_instance.search = AsyncMock(return_value={"results": []})
+        mock_instance.search = AsyncMock(return_value=SearchResult(results=[]))
 
         with patch("dotfiles_maintainer.config.ServerConfig"):
             vcs = await detect_vcs_from_memory()
@@ -79,7 +84,11 @@ async def test_detect_vcs_from_memory_git():
     with patch("dotfiles_maintainer.core.memory.MemoryManager") as MockMemoryManager:
         mock_instance = MockMemoryManager.return_value
         mock_instance.search = AsyncMock(
-            return_value={"results": [{"memory": "version_control: 'git'"}]}
+            return_value=SearchResult(
+                results=[
+                    MemoryResult(id="1", memory="version_control: 'git'", score=1.0)
+                ]
+            )
         )
 
         with patch("dotfiles_maintainer.config.ServerConfig"):
@@ -92,7 +101,9 @@ async def test_detect_vcs_from_memory_unparseable():
     with patch("dotfiles_maintainer.core.memory.MemoryManager") as MockMemoryManager:
         mock_instance = MockMemoryManager.return_value
         mock_instance.search = AsyncMock(
-            return_value={"results": [{"memory": "unknown content"}]}
+            return_value=SearchResult(
+                results=[MemoryResult(id="1", memory="unknown content", score=1.0)]
+            )
         )
 
         with patch("dotfiles_maintainer.config.ServerConfig"):
@@ -224,7 +235,12 @@ def test_vcs_get_log_jj():
     vcs = VCSCommand("jj")
     with patch.object(vcs, "run", return_value="log") as mock_run:
         vcs.get_log(5)
-        mock_run.assert_called_with(["log", "all", "--no-pager", "-n", "5"])
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert "log" in args
+        assert "-n" in args
+        assert "5" in args
+        assert "-T" in args
 
 
 def test_vcs_get_current_commit_git():

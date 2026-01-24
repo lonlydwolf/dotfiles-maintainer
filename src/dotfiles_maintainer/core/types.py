@@ -66,8 +66,9 @@ class Mem0AddResponse(BaseModel):
 class Mem0UpdateResponse(BaseModel):
     """Response from mem0 update()."""
 
-    id: str
-    text: str
+    id: str | None = None
+    text: str | None = None
+    message: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
 
