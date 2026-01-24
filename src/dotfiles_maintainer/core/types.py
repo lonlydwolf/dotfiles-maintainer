@@ -66,8 +66,33 @@ class Mem0AddResponse(BaseModel):
 class Mem0UpdateResponse(BaseModel):
     """Response from mem0 update()."""
 
-    message: str  # "Memory updated successfully"
-    # Note: update() doesn't return results list
+    id: str
+    text: str
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class Mem0GetAll(BaseModel):
+    """Single result from mem0 get_all operation"""
+
+    id: str
+    memory: str
+    metadata: dict[str, JsonValue] | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+    owner: str | None = None
+
+
+class Mem0GetAllResponse(BaseModel):
+    """Response from mem0 get_all()"""
+
+    results: list[Mem0GetAll] = Field(default_factory=list)
+
+
+class Mem0DeleteResponse(BaseModel):
+    """Response from mem0 delete() and delete_all()"""
+
+    message: str
 
 
 class AppConfig(BaseModel):
@@ -109,12 +134,11 @@ class AppChange(AppConfig):
 
     """
 
-    app_name: str
     change_type: str
     rationale: str
     improvement_metric: str
     description: str
-    vcs_commit_id: str | None
+    vcs_commit_id: str | None = None
 
 
 class SystemMetadata(BaseModel):

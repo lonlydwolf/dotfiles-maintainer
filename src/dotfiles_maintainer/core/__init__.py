@@ -1,1 +1,1 @@
-"""Package documentation."""
+"""Core package initialization."""

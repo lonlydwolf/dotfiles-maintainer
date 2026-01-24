@@ -1,13 +1,20 @@
 """Memory management with centralized error handling."""
 
 import logging
+import shutil
 
 from mem0 import AsyncMemory
 from pydantic import ValidationError
 
 from ..config import ServerConfig
 from ..utils.secrets import redact_secrets
-from .types import Mem0AddResponse, Mem0UpdateResponse, SearchResult
+from .types import (
+    Mem0AddResponse,
+    Mem0DeleteResponse,
+    Mem0GetAllResponse,
+    Mem0UpdateResponse,
+    SearchResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,4 +111,50 @@ class MemoryManager:
             raise
         except Exception as e:
             logger.error(f"Memory update failed: {e}")
+            raise
+
+    async def get_all(self, limit: int = 100) -> Mem0GetAllResponse:
+        """Retrieve all memories from the store.
+
+        Args:
+            limit (int): Maximum number of memories to retrieve.
+
+        Returns:
+            SearchResult with all memories.
+        """
+        try:
+            # Note: AsyncMemory.get_all might differ slightly based on version.
+            # We assume it supports user_id filtering.
+            result = await self.client.get_all(user_id=self.user_id, limit=limit)
+            return Mem0GetAllResponse.model_validate(result)
+
+        except Exception as e:
+            logger.error(f"Failed to retrieve all memories: {e}")
+            raise
+
+    async def delete_all(self) -> Mem0DeleteResponse:
+        """Delete all memories for the current user."""
+
+        try:
+            result = await self.client.delete_all(user_id=self.user_id)
+            return Mem0DeleteResponse.model_validate(result)
+
+        except Exception as e:
+            logger.error(f"Failed to reset memory: {e}")
+            raise
+
+    async def reset(self) -> None:
+        """Delete all memories for all users"""
+
+        try:
+            await self.client.reset()
+            # Force cleanup of local Qdrant storage if it exists to prevent ghost duplicates
+            if self.config.memory_db_path.exists():
+                logger.info(
+                    f"Removing persistent storage at {self.config.memory_db_path}"
+                )
+                shutil.rmtree(self.config.memory_db_path)
+                self.config.memory_db_path.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to reset memory: {e}")
             raise
