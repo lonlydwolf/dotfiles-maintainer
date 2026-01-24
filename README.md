@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/lonlydwolf/dotfiles-maintainer/actions/workflows/ci.yml/badge.svg)](https://github.com/lonlydwolf/dotfiles-maintainer/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/dotfiles-maintainer.svg)](https://pypi.org/project/dotfiles-maintainer/)
-[![Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen)](#testing)
+[![codecov](https://codecov.io/gh/lonlydwolf/dotfiles-maintainer/graph/badge.svg)](https://codecov.io/gh/lonlydwolf/dotfiles-maintainer)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
 

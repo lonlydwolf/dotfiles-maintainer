@@ -26,9 +26,19 @@ jobs:
       run: uv sync --python ${{ matrix.python-version }}
       
     - name: Run tests with coverage
-      run: uv run pytest --cov=dotfiles_maintainer --cov-report=xml
+      run: uv run pytest --cov=dotfiles_maintainer --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
       
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        fail_ci_if_error: true
+
+    - name: Upload test results to Codecov
+      if: ${{ !cancelled() }}
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./junit.xml
+        report-type: test_results
