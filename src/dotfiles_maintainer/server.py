@@ -88,7 +88,7 @@ async def initialize_system_baseline(
 ) -> str:
     """Establish ground truth for the environment (OS, Shell, Hardware)."""
     return await baseline.initialize_system_baseline(
-        memory_manager=get_memory(ctx),
+        memory=get_memory(ctx),
         manager_name=manager_name,
         config_map=config_map,
         system_metadata=system_metadata,

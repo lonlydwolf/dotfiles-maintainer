@@ -5,6 +5,7 @@ plugins during a temporary evaluation period.
 """
 
 import logging
+from datetime import datetime, timezone
 
 from ..core.memory import MemoryManager
 from ..core.types import MemoryResult
@@ -39,11 +40,44 @@ async def manage_trial(
 
     """
     try:
-        msg = f"Tool/Plugin Trial: {name} for {trial_period} days. Success if: {success_criteria}"
-        await memory.add_with_redaction(msg, metadata={"type": "trial", "active": True})
-        output = f"{trial_period} days Trial has been set for {name}"
-        logger.info(output)
-        return output
+        trial_text = f"""
+        Tool/Plugin Trial: {name}
+        Trial Period: {trial_period} days
+        Success Criteria: {success_criteria}
+        Timestamp: {datetime.now(timezone.utc).isoformat()}
+        """.strip()
+
+        response = await memory.add_with_redaction(
+            trial_text, metadata={"type": "trial", "app": name, "active": True}
+        )
+
+        if not response.results:
+            duplicate_detected = f"""⚠️ Trial not started (duplicate detected)
+
+            Tool/Plugin: {name}
+            Trial Period: {trial_period} days
+            Success Criteria: {success_criteria}
+            Note: A similar trial was already recorded."""
+            logger.warning(f"Trial for '{name}' duplicate detected.")
+            logger.debug(duplicate_detected)
+            return duplicate_detected
+
+        # Primary event
+        event = response.results[0]
+
+        memory_log = f"""✓ Trial Started and logged to memory
+
+        Memory ID: {event.id}
+        Event: {event.event}
+        Tool/Plugin: {name}
+        Trial Period: {trial_period} days
+        Success Criteria: {success_criteria}
+
+        {f"Note: {len(response.results)} memories affected" if len(response.results) > 1 else ""}""".strip()
+
+        logger.info(f"Trial started for '{name}' (ID: {event.id})")
+        logger.debug(memory_log)
+        return memory_log
 
     except Exception as e:
         err_msg = f"Failed to set Trial for {name}: {e}"
@@ -70,7 +104,7 @@ async def list_active_trials(
     try:
         _ = min_days_active
         search_results = await memory.search("active plugin trials")
-        logger.info(f"Retrieved {len(search_results.results)} active trials")
+        logger.debug(f"Retrieved {len(search_results.results)} active trials")
         return search_results.results
 
     except Exception as e:

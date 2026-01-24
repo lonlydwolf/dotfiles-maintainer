@@ -263,17 +263,26 @@ class VCSCommand:
     def get_log(self, count: int = 20, timeout: int | None = None) -> str:
         """Get commit history."""
         if self.vcs_type == "jj":
-            args = ["log", "all", "--no-pager", "-n", str(count)]
+            args = [
+                "log",
+                "-r",
+                "all() & ~@",
+                "--no-graph",
+                "--no-pager",
+                "-n",
+                str(count),
+                "-T",
+                'change_id.short(8) ++ " | " ++ commit_id.short(7) ++ " | " ++ author.timestamp().format("%Y-%m-%d %H:%M:%S") ++ "\\n---------------\\n" ++ description ++ "\\n---------------\\n\\n"',
+            ]
         else:
             args = [
                 "--no-pager",
                 "log",
-                "--graph",
-                "--oneline",
                 "--all",
-                "--decorate",
                 "-n",
                 str(count),
+                "--date=format:%Y-%m-%d %H:%M:%S",
+                "--format=%h | %ad%n---------------%n%B%n---------------%n",
             ]
         return self.run(args, timeout=timeout) if timeout else self.run(args)
 

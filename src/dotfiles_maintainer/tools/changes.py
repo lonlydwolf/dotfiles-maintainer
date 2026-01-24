@@ -5,6 +5,7 @@ context, capturing the rationale behind modifications.
 """
 
 import logging
+from datetime import datetime, timezone
 
 from ..core.memory import MemoryManager
 from ..core.types import AppChange
@@ -56,15 +57,55 @@ async def commit_contextual_change(
 
     """
     try:
-        msg = f"{data.app_name} change({data.change_type}) -> {data.description} \n Why? {data.rationale} \n Improvement: {data.improvement_metric} "
+        change_text = f"""
+        Configuration Change: {data.app_name}
+        Type: {data.change_type}
+        Rationale: {data.rationale}
+        Improvement: {data.improvement_metric}
+        Description: {data.description}
+        VCS Commit: {data.vcs_commit_id}
+        Timestamp: {datetime.now(timezone.utc).isoformat()}
+        """.strip()
 
-        if data.vcs_commit_id:
-            msg += f"\nVCS Commit: {data.vcs_commit_id}"
+        response = await memory.add_with_redaction(
+            change_text,
+            metadata={
+                "type": "change",
+                "app": data.app_name,
+                "change_type": data.change_type,
+                "vcs_commit": data.vcs_commit_id,
+            },
+        )
 
-        result = await memory.add_with_redaction(msg, metadata={"type": "change"})
+        if not response.results:
+            duplicate_detected = f"""⚠️ Change not logged (duplicate detected)
 
-        return f"Success: {result}"
+            App: {data.app_name}
+            Type: {data.change_type}
+            Note: A similar change was already recorded."""
+            logger.warning(f"Change for {data.app_name} duplicate detected. No new memory added.")
+            logger.debug(duplicate_detected)
+            return duplicate_detected
+
+        # Primary event
+        event = response.results[0]
+
+        memory_log = f"""✓ Change logged to memory
+
+        Memory ID: {event.id}
+        Event: {event.event}
+        App: {data.app_name}
+        Type: {data.change_type}
+        Impact: {data.improvement_metric}
+        Rationale: {data.rationale[:100]}{"..." if len(data.rationale) > 100 else ""}
+
+        {f"Note: {len(response.results)} memories affected" if len(response.results) > 1 else ""}""".strip()
+
+        logger.info(f"Change logged to memory (ID: {event.id}, App: {data.app_name})")
+        logger.debug(memory_log)
+        return memory_log
 
     except Exception as e:
-        logger.error(f"Tool failed: {e}")
-        return f"Error: {str(e)}"
+        err_msg = f"Failed to log change to memory: {e}"
+        logger.error(err_msg)
+        return err_msg

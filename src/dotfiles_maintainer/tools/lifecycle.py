@@ -5,6 +5,7 @@ deprecation, and permanent removal of configurations.
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import Literal
 
 from ..core.memory import MemoryManager
@@ -54,16 +55,55 @@ async def track_lifecycle_events(
 
     """
     try:
-        msg = f"Lifecycle Event: {action} on {old_config.app_name}. "
-        if new_config:
-            msg += f"Replaced by {new_config.app_name}. "
-        msg += f"Logic: {logic}"
+        lifecycle_text = f"""
+        Lifecycle Event: {action}
+        Target Config: {old_config.app_name}
+        Replaced by: {new_config.app_name if new_config else "None"}
+        Logic: {logic}
+        Timestamp: {datetime.now(timezone.utc).isoformat()}
+        """.strip()
 
-        await memory.add_with_redaction(msg, metadata={"type": "lifecycle"})
+        response = await memory.add_with_redaction(
+            lifecycle_text,
+            metadata={
+                "type": "lifecycle",
+                "event": action,
+                "app": old_config.app_name,
+                "replacement": new_config.app_name if new_config else "None",
+                "logic": logic,
+            },
+        )
 
-        output = f"{msg} has been logged in memory"
-        logger.info(output)
-        return output
+        if not response.results:
+            duplicate_detected = f"""⚠️ Lifecycle not logged (duplicate detected)
+
+            Lifecycle Event: {action}
+            Target Config: {old_config.app_name}
+            Replaced by: {new_config.app_name if new_config else "None"}
+            Logic: {logic}
+            Timestamp: {datetime.now(timezone.utc).isoformat()}
+            Note: A similar lifecycle was already recorded."""
+            logger.warning(f"Lifecycle event {action} for {old_config.app_name} duplicate detected.")
+            logger.debug(duplicate_detected)
+            return duplicate_detected
+
+        # Primary event
+        event = response.results[0]
+
+        memory_log = f"""✓ Lifecycle event logged to memory
+
+        Memory ID: {event.id}
+        Event: {event.event}
+        Lifecycle Event: {action}
+        Target Config: {old_config.app_name}
+        Replaced by: {new_config.app_name if new_config else "None"}
+        Logic: {logic}
+
+        {f"Note: {len(response.results)} memories affected" if len(response.results) > 1 else ""}""".strip()
+
+        logger.info(f"Lifecycle event logged to memory (ID: {event.id}, Action: {action})")
+        logger.debug(memory_log)
+        return memory_log
 
     except Exception as e:
         err_msg = f"Failed to log Lifecycle Event: {e}"

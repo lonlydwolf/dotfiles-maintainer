@@ -53,12 +53,41 @@ async def ingest_version_history(
         vcs = await detect_vcs_type()
         vcs_command = VCSCommand(vcs)
         output = vcs_command.get_log(count=count, timeout=timeout)
-        await memory.add_with_redaction(
-            f"Historical Context ({vcs}):\n{output}", metadata={"type": "history"}
+        memory_msg = f"""Historical Context({vcs}):
+        {output}
+        """.strip()
+        response = await memory.add_with_redaction(
+            memory_msg, metadata={"type": "history", "vcs": vcs, "count": str(count)}
         )
-        result = f"Ingested last {count} {vcs} commit into memory."
-        logger.info(result)
-        return result
+
+        if not response.results:
+            duplicate_detected = f"""⚠️ Historical Context not ingested
+
+            VCS: {vcs}
+            Reason: No new facts were extracted by the memory engine, or the history is identical to existing memories.
+            """.strip()
+
+            logger.warning("Historical Context not ingested (No new facts or duplicate).")
+            logger.debug(duplicate_detected)
+            return duplicate_detected
+
+        # Primary event
+        event = response.results[0]
+
+        memory_log = f"""✓ Ingested last {count} ({vcs}) commits to memory
+
+        Memory ID: {event.id}
+        Event: {event.event}
+        Historical Context:
+        ```
+        {output}
+        ```
+
+        {f"Note: {len(response.results)} memories affected" if len(response.results) > 1 else ""}""".strip()
+
+        logger.info(f"Ingested last {count} {vcs} commits to memory (ID: {event.id})")
+        logger.debug(memory_log)
+        return memory_log
 
     except Exception as e:
         err_msg: str = f"Error ingesting history: {e}"

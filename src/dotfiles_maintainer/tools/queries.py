@@ -34,7 +34,7 @@ async def get_config_context(
     """
     try:
         search_results = await memory.search(app_name)
-        logger.info(
+        logger.debug(
             f"Retrieved {len(search_results.results)} context results for '{app_name}'"
         )
         return search_results.results
@@ -68,7 +68,7 @@ async def search_change_history(
 
     try:
         search_results = await memory.search(search_query)
-        logger.info(
+        logger.debug(
             f"Retrieved {len(search_results.results)} history results for '{search_query}'"
         )
         return search_results.results
@@ -96,7 +96,7 @@ async def check_system_dependencies(
     """
     try:
         search_results = await memory.search(tool_name)
-        logger.info(
+        logger.debug(
             f"Retrieved {len(search_results.results)} dependency results for '{tool_name}'"
         )
         return search_results.results
@@ -135,7 +135,8 @@ async def sync_work_in_progress(
         files = [f.app_name for f in modified_files]
         msg = f"WIP Session Goal: {session_goal}\nModified: {files}\nStruggle: {current_struggle}"
         await memory.add_with_redaction(msg, metadata={"type": "wip"})
-        logger.info("WIP synchronized")
+        logger.info("WIP session synchronized")
+        logger.debug(msg)
         return "WIP synchronized"
 
     except Exception as e:

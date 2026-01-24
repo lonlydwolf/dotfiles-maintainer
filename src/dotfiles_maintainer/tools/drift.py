@@ -68,20 +68,40 @@ async def check_config_drift(memory: MemoryManager, timeout: int = 10) -> DriftR
 
         modified_files = [line.strip() for line in output.splitlines() if line.strip()]
 
-        message = f"Drift detected at {vcs_type} level:\n{output}"
+        drift_text = f"""Drift detected
+        VCS: {vcs_type}
+        Level: {output}
+        """.strip()
 
-        await memory.add_with_redaction(
-            message, metadata={"type": "drift", "vcs": vcs_type}
+        response = await memory.add_with_redaction(
+            drift_text,
+            metadata={
+                "type": "drift",
+                "vcs": vcs_type,
+            },
         )
 
-        logger.info(f"Drift detected at {vcs_type}:\n{output}")
+        # Primary event
+        event = response.results[0]
+
+        memory_log = f"""✓ Drift detected and saved to memory
+
+        Memory ID: {event.id}
+        Event: {event.event}
+        VCS: {vcs_type}
+        Level: {output}
+
+        {f"Note: {len(response.results)} memories affected" if len(response.results) > 1 else ""}""".strip()
+
+        logger.info(f"Drift detected and saved to memory (ID: {event.id}, Files: {len(modified_files)})")
+        logger.debug(memory_log)
 
         return DriftResult(
             status="modified",
             vcs_type=vcs_type,
             modified_files=modified_files,
             total_changes=len(modified_files),
-            message=message,
+            message=memory_log,
         )
 
     except Exception as e:

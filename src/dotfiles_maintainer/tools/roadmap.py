@@ -5,6 +5,7 @@ potential improvements for the configuration ecosystem.
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import Literal
 
 from ..core.memory import MemoryManager
@@ -40,15 +41,46 @@ async def log_conceptual_roadmap(
 
     """
     try:
-        msg = f"Roadmap Idea: {idea_title}\nHypothesis: {hypothesis}\nBlockers: {blockers}\nPriority: {priority}"
+        roadmap_text = f"""Roadmap Idea: {idea_title}
+        Hypothesis: {hypothesis}
+        Blockers: {blockers}
+        Priority: {priority}
+        Timestamp: {datetime.now(timezone.utc).isoformat()}
+        """.strip()
 
-        await memory.add_with_redaction(
-            msg, metadata={"type": "roadmap", "priority": priority}
+        response = await memory.add_with_redaction(
+            roadmap_text, metadata={"type": "roadmap", "priority": priority}
         )
 
-        output = "Roadmap Entry saved"
-        logger.info(output)
-        return output
+        if not response.results:
+            duplicate_detected = f"""⚠️ Roadmap not logged (duplicate detected)
+
+            Roadmap Idea: {idea_title}
+            Hypothesis: {hypothesis}
+            Blockers: {blockers}
+            Priority: {priority}
+            Note: A similar roadmap was already recorded."""
+            logger.warning(f"Roadmap idea '{idea_title}' duplicate detected.")
+            logger.debug(duplicate_detected)
+            return duplicate_detected
+
+        # Primary event
+        event = response.results[0]
+
+        memory_log = f"""✓ Roadmap logged to memory
+
+        Memory ID: {event.id}
+        Event: {event.event}
+        Roadmap Idea: {idea_title}
+        Hypothesis: {hypothesis}
+        Blockers: {blockers}
+        Priority: {priority}
+
+        {f"Note: {len(response.results)} memories affected" if len(response.results) > 1 else ""}""".strip()
+
+        logger.info(f"Roadmap idea '{idea_title}' logged to memory (ID: {event.id})")
+        logger.debug(memory_log)
+        return memory_log
 
     except Exception as e:
         err_msg = f"Failed to save Roadmap Entry: {e}"
@@ -82,7 +114,7 @@ async def query_roadmap(
 
         search_results = await memory.search(query)
 
-        logger.info(
+        logger.debug(
             f"Retrieved {len(search_results.results)} roadmap items for query '{query}'"
         )
         return search_results.results

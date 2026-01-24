@@ -35,13 +35,44 @@ async def log_troubleshooting_event(
 
     """
     try:
-        msg = (
-            f"Troubleshooting: {error_signature}\nCause: {root_cause}\nFix: {fix_steps}"
+        troubleshoot_text = f"""Troubleshooting: {error_signature}
+        Cause: {root_cause}
+        Fix: {fix_steps}
+        """
+        response = await memory.add_with_redaction(
+            troubleshoot_text,
+            metadata={"type": "troubleshoot", "error": error_signature},
         )
-        await memory.add_with_redaction(msg, metadata={"type": "troubleshoot"})
-        output = f"Troubleshooting Knowledge Base Updated. Added: {error_signature}"
-        logger.info(output)
-        return output
+
+        if not response.results:
+            duplicate_detected = f"""⚠️ Troubleshooting Knowledge Base not updated (duplicate detected)
+
+            Troubleshooting: {error_signature}
+            Cause: {root_cause}
+            Fix: {fix_steps}
+            Note: A similar Knowledge was already recorded."""
+
+            logger.warning(f"Troubleshooting duplicate detected for '{error_signature}'.")
+            logger.debug(duplicate_detected)
+            return duplicate_detected
+
+        # Primary event
+        event = response.results[0]
+
+        memory_log = f"""✓ Troubleshooting Knowledge logged to memory
+
+        Memory ID: {event.id}
+        Event: {event.event}
+        Troubleshooting: {error_signature}
+        Cause: {root_cause}
+        Fix: {fix_steps}
+
+        {f"Note: {len(response.results)} memories affected" if len(response.results) > 1 else ""}""".strip()
+
+        logger.info(f"Troubleshooting knowledge logged for '{error_signature}' (ID: {event.id})")
+        logger.debug(memory_log)
+        return memory_log
+
     except Exception as e:
         err_msg = f"Failed to add {error_signature} troubleshooting to memory: {e}"
         logger.error(err_msg)
@@ -66,7 +97,7 @@ async def get_troubleshooting_guide(
     """
     try:
         search_results = await memory.search(f"troubleshooting {error_keyword}")
-        logger.info(
+        logger.debug(
             f"Retrieved {len(search_results.results)} troubleshooting logs for '{error_keyword}'"
         )
         return search_results.results
