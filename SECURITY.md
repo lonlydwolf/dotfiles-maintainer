@@ -1,32 +1,17 @@
-# Security Policy
+# Security and support status
 
-## Supported Versions
+Dotfiles Maintainer is a retired learning prototype. No version is actively supported, and there is no promised response timeline or security-fix release schedule. The historical `1.x` releases should not be treated as production-ready software.
 
-We support the latest major version of the Dotfiles Maintainer MCP server.
+## Sensitive data
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+Do not submit secrets or sensitive raw configuration to this server. `redact_secrets()` is a best-effort regex helper, not a security boundary: private-key bodies and some structured credential values can remain intact. Metadata bypasses this helper. Data passed to the memory engine may be processed by the configured remote LLM even though Qdrant storage is local.
 
-## Reporting a Vulnerability
+The working-tree status tool is not a security scanner or a check for unauthorized changes. It follows process working directory and has documented reporting limitations. The CLI also includes memory-reset operations; use disposable data when exploring the code. Configuration values are not a secret-masking interface, so do not share configuration dumps containing credentials.
 
-If you discover a security vulnerability within this project, please **DO NOT** create a public GitHub issue.
+See [architecture](ARCHITECTURE.md) and [usage](docs/usage.md) for the actual data flow and limitations. The closeout review used synthetic data and did not establish that any real secret exposure occurred.
 
-Instead, please report it via email to the maintainer (or via a private GitHub security advisory if enabled).
+## Reporting an issue
 
-### What to Include:
-*   A description of the vulnerability.
-*   Steps to reproduce the issue.
-*   Potential impact.
+Do not post credentials, private dotfiles, or exploitable personal configuration in a public issue. If contacting the author, use the contact address in [package metadata](pyproject.toml), or private GitHub security reporting if available. There is no guarantee of triage or a fix for this retired project.
 
-### Response Timeline:
-*   We will acknowledge receipt of your report within 48 hours.
-*   We will provide a timeline for a fix within 1 week.
-*   We will notify you once the fix is released.
-
-## Sensitive Data Handling
-
-This project is designed to handle configuration files which may inadvertently contain secrets.
-*   We employ `redact_secrets()` utility to scrub known patterns before storing data in memory.
-*   However, no regex is perfect. Users are responsible for ensuring their dotfiles do not contain hardcoded secrets.
+A fork intended for real use needs its own support policy, dependency review, tested data-handling contract, and operational validation.

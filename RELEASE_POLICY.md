@@ -1,40 +1,11 @@
-# Release Policy
+# Historical release policy
 
-This document outlines the release process and versioning strategy for the Dotfiles Maintainer project.
+This project is retired. No releases, maintenance cadence, compatibility window, or security-response timeline are promised. `main` contains the learning prototype and should not be read as a production-ready branch.
 
-## Versioning Strategy
+The latest historical release is [v1.0.1](https://github.com/lonlydwolf/dotfiles-maintainer/releases/tag/v1.0.1), published January 24, 2026. See [CHANGELOG.md](CHANGELOG.md) for recorded changes. Historical tags describe that source at that time; they do not guarantee that present-day dependencies or provider models remain compatible.
 
-We adhere to [Semantic Versioning (SemVer) 2.0.0](https://semver.org/).
+## Conventions retained for reference
 
-**Format:** `MAJOR.MINOR.PATCH`
+The project used `MAJOR.MINOR.PATCH` version numbers with the intended semantic-versioning distinction between incompatible changes, additive features, and fixes. The documented workflow was to develop a change in Git or Jujutsu, verify it, and tag the release on `main`.
 
-*   **MAJOR**: Incompatible API changes (e.g., removing a tool, changing tool arguments breaking backward compatibility).
-*   **MINOR**: Functionality added in a backward-compatible manner (e.g., adding a new tool, new optional parameters).
-*   **PATCH**: Backward-compatible bug fixes (e.g., fixing regex, updating dependencies).
-
-## Release Cadence
-
-*   **Feature Releases (Minor):** Bi-weekly or when significant new features are ready and tested.
-*   **Bug Fixes (Patch):** As needed, immediately for critical bugs.
-*   **Security Fixes:** Immediate priority release.
-
-## Branching Model
-
-We use a simplified workflow compatible with both standard Git and Jujutsu (`jj`):
-
-*   `main`: The stable, production-ready branch.
-*   **Features:** Developed in ephemeral branches (Git) or anonymous revisions (jj) before being finalized into a named branch for PR.
-
-### Release Workflow
-
-1.  **Work:** Finalize the code changes.
-2.  **Branch:** Ensure `main` is up to date and clean.
-3.  **Verify:** CI checks must pass.
-4.  **Tag:** Create a git tag (e.g., `v1.2.0`) on `main`.
-
-## Deprecation Policy
-
-Before removing a feature/tool:
-1.  Mark it as `[DEPRECATED]` in the tool description and docstring.
-2.  Add a warning log in the code.
-3.  Wait for at least one MINOR release cycle before removing it in the next release.
+For a maintained fork, define a new release policy based on its actual users and support capacity. Before releasing, validate installation, tool contracts, configuration precedence, repository targeting, sensitive-data handling, and the selected provider. Passing unit tests alone is not a production-readiness claim.

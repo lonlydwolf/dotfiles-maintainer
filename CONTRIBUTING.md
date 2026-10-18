@@ -1,92 +1,36 @@
-# Contributing to Dotfiles Maintainer
+# Development notes for a retired project
 
-Thank you for your interest in contributing! We welcome all contributions that help make this MCP server more robust, secure, and useful.
+Dotfiles Maintainer is a completed learning project with no active maintenance or solicitation of feature contributions. Issues and pull requests may not be reviewed. The source remains available under the [Apache 2.0 license](LICENSE) for inspection and independent forks.
 
-## 🛠️ Development Setup
+Start with the [case study](docs/CASE_STUDY.md), [architecture](ARCHITECTURE.md), and [security notes](SECURITY.md). They explain the implemented boundaries and unresolved limitations.
 
-This project uses `uv` for ultra-fast dependency management.
+## Historical local setup
 
-1.  **Install uv:**
-    ```bash
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    ```
+From a checkout or your own fork, with `uv` available:
 
-2.  **Clone & Sync:**
-    ```bash
-    git clone https://github.com/yourusername/dotfiles-maintainer.git
-    cd dotfiles-maintainer
-    uv sync
-    ```
-
-3.  **Activate Environment:**
-    ```bash
-    source .venv/bin/activate
-    ```
-
-## 🧪 Testing & Quality
-
-We enforce strict quality standards. Please run these checks before submitting a PR.
-
-### Run Tests
 ```bash
+uv sync
 uv run python -m pytest tests/
 ```
-*Requirement: 100% pass rate.*
 
-### Linting & Formatting
+These are the project's existing development commands, not a claim that the current dependency set has been revalidated. Tests include mocks and temporary Git/Jujutsu repositories; Jujutsu tests can skip if its binary is absent. Avoid live credentials and use disposable memory storage and repositories for experiments.
+
+Useful checks when developing a fork:
+
 ```bash
 uv run ruff check .
-uv run ruff format .
-```
-*Requirement: Zero warnings/errors.*
-
-### Type Checking
-```bash
+uv run ruff format --check .
 uv run basedpyright
 ```
-*Requirement: Zero errors.*
 
-## 📝 Commit Guidelines
+Lint/type tools are declared in the development dependencies. Their presence here does not imply the historical CI enforced all of them or that the existing code passes every check.
 
-We follow [Conventional Commits](https://www.conventionalcommits.org/).
+## Tests worth adding before extending a fork
 
-**Format:** `<type>(<scope>): <subject>`
+- Environment-variable loading and preservation of explicit provider/model choices.
+- Separate server installation and target repositories, plus clean and dirty Git/Jujutsu states.
+- Empty memory results and provider failures that preserve already-known local status.
+- Synthetic secret fixtures covering complete blocks and structured data, including metadata.
+- Deterministic age/status/category semantics wherever a tool promises filtering.
 
-**Types:**
-*   `feat`: New feature (e.g., adding a new tool)
-*   `fix`: Bug fix
-*   `docs`: Documentation only changes
-*   `style`: Formatting, missing semi-colons, etc.
-*   `refactor`: Code change that neither fixes a bug nor adds a feature
-*   `test`: Adding missing tests or correcting existing tests
-*   `chore`: Changes to the build process or auxiliary tools
-
-**Example:**
-`feat(drift): add support for jujutsu vcs detection`
-
-## 🚀 Pull Request Process
-
-We recommend using **Jujutsu (jj)** for managing contributions, but standard Git is also accepted.
-
-### Using Jujutsu (Recommended)
-1.  **Start work:** `jj new main`
-2.  **Iterate:** Make changes and use `jj describe` to set the commit message.
-3.  **Branch:** Create a bookmark: `jj bookmark create feat/my-feature`
-4.  **Push:** `jj git push`
-5.  See [docs/jj_cli_reference.md](docs/jj_cli_reference.md) for a detailed cheat sheet.
-
-### Using Git (Alternative)
-1.  Create a new branch from `main`: `git checkout -b feat/my-feature`
-2.  Commit your changes: `git commit -m "feat: description"`
-3.  Push to origin: `git push origin feat/my-feature`
-
-### Checklist
-1.  Ensure all tests pass: `uv run python -m pytest tests/`
-2.  Ensure no linting errors: `uv run ruff check .`
-3.  Submit the PR with a clear description of the "Why" and "What".
-
-## 🏗️ Architecture
-
-Please familiarize yourself with our modular architecture before contributing code. All new tools should reside in `src/dotfiles_maintainer/tools/` and be registered in `server.py`.
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for details.
+The historical project used Conventional Commit-style messages and both Git and Jujutsu. [The Jujutsu reference](docs/jj_cli_reference.md) is retained as a historical aid; check commands against your installed version. New tools are implemented in `tools/` and registered in `server.py`, but a fork should establish its core workflow before expanding the tool catalog.

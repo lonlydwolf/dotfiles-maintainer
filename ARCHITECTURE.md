@@ -1,104 +1,54 @@
 # Architecture: Dotfiles Maintainer MCP
 
-This document describes the high-level design, component interactions, and data flow of the Dotfiles Maintainer MCP server.
+This document describes the retired prototype as implemented. It is not a design guarantee or an active roadmap. See the [case study](docs/CASE_STUDY.md) for the motivation and retrospective.
 
-## 🏗️ High-Level Design
+## Components
 
-Dotfiles Maintainer is built as an AI-native system with a modular architecture, designed to provide semantic context to LLMs managing configuration files.
+| Component | Responsibility |
+| --- | --- |
+| `server.py` | Registers MCP tools and creates configuration/memory objects during lifespan startup |
+| `cli.py` | Typer commands for manual inspection, diagnostics, and memory administration |
+| `config.py` | Environment settings and mem0/provider/embedder configuration |
+| `core/memory.py` | Wraps mem0 calls, applies text redaction on add/update, and validates responses |
+| `core/types.py` | Pydantic request and response models |
+| `tools/` | Formats supplied information and orchestrates memory/VCS calls |
+| `utils/vcs.py` | Detects Git/Jujutsu and runs subprocesses for status/history |
+| `utils/secrets.py` | Best-effort regex replacement of selected secret patterns |
+| `prompts/` | Persona/workflow instructions and fact-extraction guidance |
 
-### Core Components
-
-1.  **MCP Server (`server.py`)**: Built using the `FastMCP` framework. It acts as the primary interface for AI agents (like Claude Desktop or Cursor), exposing a suite of specialized tools.
-2.  **CLI (`cli.py`)**: A `Typer`-based command-line interface for manual maintenance, health checks, and debugging.
-3.  **Semantic Memory (`core/memory.py`)**: Powered by `mem0` and `Qdrant`. It stores the "Why" behind configuration changes, allowing the agent to remember past decisions across sessions.
-4.  **VCS Integration (`utils/vcs.py`)**: A hybrid utility that detects and interacts with both **Git** and **Jujutsu (jj)**.
-5.  **Modular Tools (`tools/`)**: Each MCP tool is implemented as a standalone module, promoting maintainability and extensibility.
-
----
-
-## 🧩 Component Interactions
-
-The system follows a "Service-Utility" pattern where tools orchestrate logic by consuming core services.
-
-### Interaction Diagram
+## Data flow
 
 ```mermaid
-graph TD
-    Client[MCP Client / LLM] --> Server[FastMCP Server]
-    Server --> Tools[Modular Tools]
-    
-    subgraph "Core Services"
-        Tools --> Memory[MemoryManager]
-        Tools --> VCS[VCS Utility]
-    end
-    
-    subgraph "External Systems"
-        Memory --> Mem0[Mem0 AI]
-        Memory --> Qdrant[(Qdrant Vector DB)]
-        VCS --> Git[Git Binary]
-        VCS --> JJ[Jujutsu Binary]
-    end
-    
-    subgraph "Security"
-        Memory --> Redactor[Secrets Redactor]
-    end
+flowchart TD
+    Client[MCP client / assistant] --> Server[FastMCP server]
+    Server --> Tools[Tool modules]
+    Tools --> Memory[MemoryManager]
+    Tools --> VCS[VCS helpers]
+    Memory --> Redaction[Text redaction on add/update]
+    Redaction --> Mem0[mem0]
+    Memory -->|Metadata without redaction| Mem0
+    Mem0 --> Provider[Configured LLM provider]
+    Mem0 --> Embeddings[Sentence-transformer embeddings]
+    Mem0 --> Qdrant[Local Qdrant storage]
+    VCS --> Repository[Git/Jujutsu in process working directory]
 ```
 
----
+For `commit_contextual_change`, the assistant supplies the change description and rationale. The tool formats those values and metadata, then passes them to `MemoryManager`. The wrapper redacts selected patterns in the text, calls mem0, validates its response, and returns a tool result. The tool neither makes the file change nor independently verifies it. Semantic extraction may produce no new record, or alter existing memories.
 
-## 🔄 Data Flow: Tool Execution
+Local vector storage does not imply that all processing is local: the configured memory LLM may be a remote service. Provider SDKs and embedding infrastructure are part of the startup/dependency footprint even though many exposed tools are simple record-formatting operations.
 
-When an agent invokes a tool (e.g., `commit_contextual_change`), the data flows as follows:
+## Boundaries and known limitations
 
-1.  **Request**: The LLM provides structured input (e.g., file path, change description, rationale).
-2.  **Context Gathering**: The tool may query `MemoryManager` to retrieve previous context or `VCS` to check the current state of the file.
-3.  **Action**: The tool performs its primary logic (e.g., validating the change).
-4.  **Security Scrubbing**: Before any data is persisted to semantic memory, it passes through the `redact_secrets` utility.
-5.  **Persistence**: The `MemoryManager` stores the redacted text and metadata in the vector database.
-6.  **Response**: A structured result is returned to the LLM, confirming the action and providing any new context.
+**Configuration:** `DOTFILES_LLM_KEY` is the explicit key setting. Provider-specific environment-variable autodetection overwrites explicit provider/model choices unless that setting is nonempty. See [usage](docs/usage.md) for exact names and caveats.
 
----
+**Repository status:** `check_config_drift` reads Git/Jujutsu status in the server's working directory. It does not compare deployed configuration against a baseline or a dotfiles manager's source. Baseline metadata does not select the repository. Clean Jujutsu prose can be interpreted as changed files, and an empty memory-write result can discard the detected status details. The name “drift” is broader than the implementation.
 
-## 🛡️ Security Model
+**Memory semantics:** supplied baseline data and retrieved memories are context, not verified ground truth. Roadmap filters are search phrases; trial minimum age is ignored. Search errors or invalid response shapes may be represented as empty results, so an empty result does not always mean that no relevant record exists.
 
-### Secrets Redaction
-The `utils/secrets.py` module contains a robust redaction engine. It uses optimized regular expressions to identify and scrub:
-*   API Keys (OpenAI, Anthropic, Google, AWS, etc.)
-*   Authentication Tokens (GitHub, Slack)
-*   Private Key blocks
-*   Generic password/token patterns in config files
+**Sensitive data:** only add/update text passes through the regex helper. Metadata is not sanitized, and the helper misses complete private-key bodies and some structured credentials. Its output is not safe to assume secret-free. See [SECURITY.md](SECURITY.md).
 
-### Drift Detection
-The `check_config_drift` tool acts as a security layer by detecting uncommitted changes at the start of a session. This prevents the agent from working on a "dirty" or potentially compromised environment without explicit user acknowledgement.
+**Lifecycle:** the MCP lifespan constructs a shared memory object. Its shutdown block logs shutdown but does not explicitly close the underlying resources. This is a prototype integration boundary, not a completed operational lifecycle design.
 
----
+## Working on a fork
 
-## 📂 Directory Structure
-
-```text
-src/dotfiles_maintainer/
-├── core/           # Core logic & Shared Services
-│   ├── memory.py   # Mem0 wrapper with redaction logic
-│   ├── types.py    # Pydantic models for type safety
-│   └── exceptions.py
-├── tools/          # MCP Tool Implementations
-│   ├── drift.py    # VCS vs Filesystem comparison
-│   ├── history.py  # VCS history ingestion
-│   ├── changes.py  # Contextual change logging
-│   └── ...         # Other specialized tools
-├── utils/          # Low-level Utilities
-│   ├── vcs.py      # Git/JJ abstraction layer
-│   └── secrets.py  # Regex-based secrets scrubbing
-├── prompts/        # System Persona & LLM Instructions
-├── server.py       # FastMCP Server Entry Point
-└── cli.py          # Typer CLI Entry Point
-```
-
----
-
-## 🚀 Extensibility
-
-The project is designed for easy extension:
-1.  **New Tools**: Add a new file in `tools/` and register it in `server.py`.
-2.  **New VCS**: Extend the `VCSType` and `VCSCommand` class in `utils/vcs.py`.
-3.  **New Memory Providers**: Update `ServerConfig` and `MemoryManager` to support different `mem0` backends.
+A new tool belongs in `tools/` with registration in `server.py`. Changes to memory behavior belong in the wrapper/configuration boundary; VCS behavior belongs in the helper. Before extending the tool catalog, establish an actual workflow and tests for configuration precedence, repository targeting, provider failure, and semantic versus deterministic state. See [development notes](CONTRIBUTING.md).
