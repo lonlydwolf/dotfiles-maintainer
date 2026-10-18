@@ -1,186 +1,74 @@
 # Dotfiles Maintainer MCP
 
-[![CI](https://github.com/lonlydwolf/dotfiles-maintainer/actions/workflows/ci.yml/badge.svg)](https://github.com/lonlydwolf/dotfiles-maintainer/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/dotfiles-maintainer.svg)](https://pypi.org/project/dotfiles-maintainer/)
-[![codecov](https://codecov.io/gh/lonlydwolf/dotfiles-maintainer/graph/badge.svg)](https://codecov.io/gh/lonlydwolf/dotfiles-maintainer)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
+**Completed learning project · retired prototype · no active maintenance.**
 
-**An AI-native MCP server for managing configuration files with semantic memory, context awareness, and strict drift detection.**
+I built this project to explore how an AI assistant could help maintain my dotfiles and remember the reasoning behind configuration decisions. It combines an MCP server, semantic memory, and Git/Jujutsu helpers. I owned the whole project; deciding which tools the assistant actually needed was the hardest part.
 
----
+For my current workflow, having a model inspect my dotfiles and Git history has proved sufficient, so I no longer use this server. That is a personal workflow decision, not a claim that models can reliably reconstruct undocumented intent. The code and release history remain here as a learning artifact.
 
-## 🚀 Key Features
+Read the [case study](docs/CASE_STUDY.md) for the motivation, design decisions, and retrospective. The latest historical release is [v1.0.1](https://github.com/lonlydwolf/dotfiles-maintainer/releases/tag/v1.0.1), published January 24, 2026. [Main CI at that revision](https://github.com/lonlydwolf/dotfiles-maintainer/actions/runs/21320410839) passed on Python 3.10–3.13; it does not establish current dependency or model compatibility.
 
-*   **🧠 Semantic Memory:** Remembers *why* changes were made, not just *what* changed.
-*   **🛡️ Drift Detection:** Prevents configuration rot by detecting uncommitted changes at session start.
-*   **🖥️ Hardware Aware:** Adapts suggestions based on system metadata (OS, CPU, Shell).
-*   **🔒 Secure by Default:** Automatically redacts API keys and secrets before storing memories.
-*   **🔌 Modular & Extensible:** Built on `FastMCP` (via official SDK) with a plugin-ready architecture.
+## What the prototype implements
 
----
+- MCP tools for recording supplied configuration changes, rationale, environment details, troubleshooting notes, and session context.
+- Semantic retrieval through mem0, local Qdrant storage, and sentence-transformer embeddings, with an internal LLM used by the memory engine.
+- Git/Jujutsu working-tree status and commit-history helpers.
+- Pydantic input/response models, a Typer CLI, and unit tests plus temporary-repository integration tests.
 
-## 📦 Installation
+The server does not edit or deploy dotfiles itself. The calling assistant supplies information and performs any file changes separately. Baseline metadata informs later retrieval; it is not an independently verified inventory.
 
-### Prerequisites
+## Important limits
 
-*   **Python 3.10+**
-*   **uv** (Fast Python package installer)
+This is an experimental memory companion, not a reliable configuration auditor or a security boundary. Do not feed it secrets or sensitive raw configuration.
 
-If you don't have `uv` installed:
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+- **Redaction is incomplete.** Private-key bodies and some structured credential values can survive the regex helper. Metadata is passed to the memory engine without redaction. Configured remote providers may receive submitted content.
+- **Repository selection follows the server's working directory.** Launching with `uv --directory /path/to/dotfiles-maintainer` checks this server checkout, not a separate dotfiles repository. There is no configured dotfiles-root setting, and no comparison of deployed home files with a manager's source state.
+- **Status reporting has known errors.** Clean Jujutsu status prose can be reported as changes. An empty memory-write result can turn a detected change into an error with no file details.
+- **Semantic retrieval is approximate.** Roadmap status/priority are search terms rather than enforced filters; `list_active_trials` ignores its minimum-age argument. These tools are not an authoritative task or lifecycle database.
 
-### Step-by-Step Installation
+These limits were documented during the later closeout review; they are not fixes in the code. See [architecture](ARCHITECTURE.md), [usage](docs/usage.md), and [security notes](SECURITY.md) before reproducing the experiment.
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/lonlydwolf/dotfiles-maintainer.git
-    cd dotfiles-maintainer
-    ```
-    *Note: This project also supports [Jujutsu (jj)](https://github.com/martinvonz/jj) for version control.*
+## Historical setup
 
-2.  **Install dependencies:**
-    ```bash
-    uv sync
-    ```
-
-3.  **Environment Configuration:**
-    The server requires the following environment variables for memory operations:
-
-    | Variable | Description | Default |
-    |----------|-------------|---------|
-    | `DOTFILES_USER_ID` | Unique ID for memory partitioning | Current `$USER` |
-    | `DOTFILES_LLM_PROVIDER` | `openai`, `anthropic`, `gemini`, or `ollama` | `gemini` |
-    | `LLM_KEY` | API Key for the chosen provider | (Required) |
-    | `LOG_LEVEL` | Logging level (DEBUG, INFO, etc.) | `INFO` |
-
----
-
-## 🛠️ MCP Client Configuration
-
-To use this server with an MCP-compliant client, configure it to run via `uv`.
-
-### Generic Configuration Pattern
-Most clients require a configuration similar to this:
-
-**Command:** `uv`
-**Arguments:** `--directory /absolute/path/to/dotfiles-maintainer run dotfiles-mcp`
-**Environment Variables:**
-*   `LLM_KEY`: your-api-key
-*   `DOTFILES_USER_ID`: your-username
-
-### Implementation Examples
-
-#### Gemini CLI
-Add to your `config.yaml` or relevant settings:
-```yaml
-mcpServers:
-  dotfiles-maintainer:
-    command: uv
-    args: ["--directory", "/path/to/repo", "run", "dotfiles-mcp"]
-    env:
-      LLM_KEY: "..."
-      DOTFILES_USER_ID: "..."
-```
-
-#### Claude Desktop / Claude Code
-Add to your `claude_desktop_config.json`:
-```json
-{
-  "mcpServers": {
-    "dotfiles-maintainer": {
-      "command": "uv",
-      "args": ["--directory", "/path/to/repo", "run", "dotfiles-mcp"],
-      "env": {
-        "LLM_KEY": "...",
-        "DOTFILES_USER_ID": "..."
-      }
-    }
-  }
-}
-```
-
-#### IDE Extensions (Cursor / Continue)
-Configure as an "External MCP Server" using the generic command pattern above.
-
----
-
-## 🧪 Testing
-
-We use `pytest` for unit and integration testing.
+For inspection or a fork, the project declares Python 3.10+ and uses `uv`:
 
 ```bash
-# Run all tests
-uv run pytest
-
-# Run with coverage report
-uv run pytest --cov=dotfiles_maintainer
+git clone https://github.com/lonlydwolf/dotfiles-maintainer.git
+cd dotfiles-maintainer
+uv sync
 ```
 
----
+Dependency installation and model downloads may be substantial. The lockfile and historical tests do not guarantee that a fresh environment or current provider API works unchanged.
 
-## 🔄 Version Control Workflow
+The explicit configuration names are:
 
-This project is managed with **Jujutsu (jj)**, but fully supports standard Git workflows.
+| Variable | Purpose |
+| --- | --- |
+| `DOTFILES_USER_ID` | Memory partition; defaults to `$USER` |
+| `DOTFILES_MEMORY_PATH` | Local Qdrant path; defaults to `~/.dotfiles-mcp/qdrant` |
+| `DOTFILES_LLM_PROVIDER` | `gemini`, `openai`, `anthropic`, or `ollama` |
+| `DOTFILES_LLM_KEY` | Explicit provider key; the unprefixed `LLM_KEY` is **not** read |
+| `LLM_MODEL` | Explicit model name; verify availability with the provider |
+| `DOTFILES_VCS_TIMEOUT` | VCS timeout in seconds; defaults to 10 |
+| `LOG_LEVEL` | Logging level; defaults to `INFO` |
 
-*   **Primary VCS:** [Jujutsu (jj)](https://github.com/martinvonz/jj)
-*   **Compatibility:** Fully compatible with `git` commands.
+**Configuration precedence caveat:** using `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `OLLAMA_BASE_URL` for autodetection overwrites the provider and model, even when `LLM_MODEL` is set. A nonempty `DOTFILES_LLM_KEY` bypasses that autodetection. Set the explicit provider, key, and model together for a hosted-provider experiment. Historical defaults are not current model recommendations. Ollama custom endpoint handling is incomplete; see the [usage guide](docs/usage.md).
 
----
+For a synthetic experiment, an MCP client can launch `dotfiles-mcp` through `uv run`; [usage](docs/usage.md) explains process-directory implications. Avoid applying the old installation-directory launch pattern to real dotfiles.
 
-## 🏗️ Architecture
+## Exploring the source
 
-The project follows a modular architecture:
-
-```
+```text
 src/dotfiles_maintainer/
-├── core/           # Shared logic (Memory, Types)
-├── tools/          # Individual MCP tools (Drift, History, etc.)
-├── prompts/        # System Persona & Workflows
-└── utils/          # VCS & Security helpers
+├── core/       # Memory wrapper and typed data models
+├── tools/      # MCP tool implementations
+├── prompts/    # Persona and memory-extraction prompts
+├── utils/      # VCS helpers and best-effort redaction
+├── config.py   # Environment settings and memory configuration
+├── server.py   # MCP registration and lifespan
+└── cli.py      # Manual inspection commands
 ```
 
----
+[API reference](docs/api.md) · [Fork/development notes](CONTRIBUTING.md) · [Historical release policy](RELEASE_POLICY.md) · [Changelog](CHANGELOG.md)
 
-## 💻 Development & Contributing
-
-We welcome contributions! Please check [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
-
-### Using Templates
-Use the provided templates in the `Templates/` directory:
-*   **Tools:** `Templates/tool.py.template`
-*   **Resources:** `Templates/resource.py.template`
-*   **Prompts:** `Templates/prompt.py.template`
-
-### Adding a New Tool
-1.  Copy `Templates/tool.py.template` to `src/dotfiles_maintainer/tools/your_tool.py`.
-2.  Implement logic using `MemoryManager`.
-3.  Register the tool in `src/dotfiles_maintainer/server.py`.
-
----
-
-## 🔍 Troubleshooting
-
-*   **`uv: command not found`:** Ensure `uv` is in your PATH after installation.
-*   **Database Errors:** Ensure `~/.dotfiles-mcp/qdrant` is writable.
-*   **Relative Paths:** Always use **absolute paths** in MCP client configurations.
-
----
-
-## ✅ Development Status
-
-**Completed:**
-- [x] Modular Refactoring
-- [x] Core Tools Implementation
-- [x] Health Check Tool
-- [x] Manual Testing CLI
-
-**Next Steps:**
-- [ ] Backup & Restore (`export_memory_backup`)
-- [ ] Secrets Scanning (`scan_for_uncommitted_secrets`)
-
----
-
-**License:** Apache 2.0
+Licensed under [Apache 2.0](LICENSE).
